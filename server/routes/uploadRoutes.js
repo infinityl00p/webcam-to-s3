@@ -1,5 +1,5 @@
 const AWS = require('aws-sdk');
-const keys = require('../../config/dev');
+const keys = require('../../config/keys');
 
 const s3 = new AWS.S3({
   accessKeyId: keys.accessKeyId,
@@ -8,7 +8,7 @@ const s3 = new AWS.S3({
 
 module.exports = app => {
   app.get('/api/upload', (req,res) => {
-    const key= `420/${req.query.type}.jpeg`;
+    const key = `420/${req.query.orientation}.jpeg`;
 
     s3.getSignedUrl('putObject', {
       Bucket: 'test-wear-modello',

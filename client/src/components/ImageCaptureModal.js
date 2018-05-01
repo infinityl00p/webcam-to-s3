@@ -21,7 +21,7 @@ class ImageCaptureModal extends Component {
 
   handleSave = () => {
     const imageBlob = this.dataURLtoBlob(this.state.screenshot);
-    this.props.saveImage(imageBlob, this.props.showModal);
+    this.props.saveImage(this.state.screenshot, imageBlob, this.props.imageOrientation);
     this.setState({ screenshot: null });
     this.props.onClose();
   }
@@ -45,18 +45,36 @@ class ImageCaptureModal extends Component {
   renderScreenshotOrWebcam = () => {
     if(this.state.screenshot) {
       return (
-        <img src={this.state.screenshot} height={300} width={300} />
+        <img src={this.state.screenshot} alt='screenshot' />
       );
     } else {
       return (
         <Webcam
           audio={false}
           height={300}
+          width={300}
           ref={node => this.webcam = node}
           screenshotFormat="image/jpeg"
-          width={300}
         />
       )
+    }
+  }
+
+  renderButtons = () => {
+    if(this.state.screenshot) {
+      return (
+      <Grid container>
+        <Button onClick={() => this.setState({ screenshot: null })}>Recapture</Button>
+        <Button onClick={this.handleSave}>Save and Close</Button>
+      </Grid>
+      )
+    } else {
+      return (
+        <Grid container>
+          <Button onClick={this.handleCapture}>Capture</Button>
+          <Button onClick={this.props.onClose}>Close</Button>
+        </Grid>
+      );
     }
   }
 
@@ -71,17 +89,14 @@ class ImageCaptureModal extends Component {
         <Grid container className={this.props.classes.paper}>
 
           <Typography style={{ textAlign: 'center' }} variant="title" id="modal-title">
-            Capture {this.props.showModal} Image
+           {this.props.imageOrientation} portrait
           </Typography>
 
           <Grid item>
             {this.renderScreenshotOrWebcam()}
           </Grid>
 
-          <Grid container>
-            <Button onClick={this.handleCapture}>Capture</Button>
-            <Button onClick={this.handleSave}>Save</Button>
-          </Grid>
+          {this.renderButtons()}
 
         </Grid>
       </Modal>

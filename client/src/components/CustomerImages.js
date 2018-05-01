@@ -7,6 +7,8 @@ import Button from 'material-ui/Button';
 import ImageCaptureModal from './ImageCaptureModal';
 import PortraitImage from './PortraitImage';
 
+const CID = 5;
+
 const styles = theme => ({
   root: {
     flexGrow: 1
@@ -19,54 +21,80 @@ class CustomerImages extends Component {
 
     this.state = {
       showModal: false,
+      modalProps: {
+        imageOrientation: null
+      },
       images: {
-        front: null,
-        back: null,
-        side: null
+        front: ``,
+        back: ``,
+        side: ``
       }
     };
   }
 
-  handleClick = (orientation) => {
-    this.setState({ showModal: orientation })
+  componentDidMount() {
+    axios.get(`http://localhost:5000/api/customers/${CID}/images`)
+      .then((response) => {
+        this.setState({
+          images: {
+            front: response.data.front,
+            back: response.data.back,
+            side: response.data.side
+          }
+        })
+      })
+      .catch((err) =>{
+        console.log(err);
+      });
   }
 
-  handleSubmit = async (imageFile, type) => {
-    const imageUrl = await this.submitImageFile(imageFile, type);
+  handleClick = (imageOrientation) => {
+    const modalProps = {};
+    modalProps.imageOrientation = imageOrientation;
+
+    this.setState({
+      modalProps,
+      showModal: true
+    })
+  }
+
+  handleSubmit = async (screenshot, imageFile, imageOrientation) => {
+    await this.submitImageFile(imageFile, imageOrientation);
     const images = this.state.images;
-    images[type.toLowerCase()] = `https://s3-us-west-2.amazonaws.com/test-wear-modello/420/${type.toLowerCase()}.jpeg`;
-    this.setState({images})
+    //TODO: screenshot is a work around, i should really be seeing what amazon has stored (but i can assume if there are no errors it is correctly stored)
+    images[imageOrientation] = screenshot;
+    this.setState({ images });
   }
 
-  submitImageFile = async (imageFile, type) => {
-    const uploadConfig = await axios.get(`/api/upload?type=${type.toLowerCase()}`);
+  submitImageFile = async (imageFile, imageOrientation) => {
+    const uploadConfig = await axios.get(`/api/upload?orientation=${imageOrientation}`);
 
     await axios.put(uploadConfig.data.url, imageFile, {
       headers: {
         'Content-Type': 'image/jpeg'
       }
     });
-
-    return uploadConfig.data.url;
+    console.log(uploadConfig.data.url);
+    await axios.post(`/api/customers/${CID}/images?type=${imageOrientation}&url=${uploadConfig.data.url}`);
   }
 
   renderCustomerImages = () => (
-    ['Front', 'Side', 'Back'].map(orientation => {
+    ['front', 'side', 'back'].map(imageOrientation => {
       return (
-        <Grid key={orientation} item>
+        <Grid key={imageOrientation} item>
           <Grid item xs={12}>
             <Typography variant="title" style={{ textAlign: 'center' }}>
-              {orientation}
+              {imageOrientation}
             </Typography>
             <PortraitImage
-              imageUrl={this.state.images[orientation.toLowerCase()]}
-              type={orientation}
-              width={150}
+              imageUrl={this.state.images[imageOrientation]}
+              defaultImageUrl='http://cdn7.bigcommerce.com/s-viqdwewl26/stencil/8f903ed0-76e7-0135-12e4-525400970412/icons/icon-no-image.svg'
+              type={imageOrientation}
               height={150}
             />
           </Grid>
           <Grid container justify='center'>
-            <Button onClick={() => {this.handleClick(orientation)}}>
+            <Button onClick={() => {this.handleClick(imageOrientation)}}>
               Capture Image
             </Button>
           </Grid>
@@ -75,18 +103,23 @@ class CustomerImages extends Component {
     })
   )
 
-  render() {
-    const { classes } = this.props;
-
+  renderModal = () => {
     return (
-      <Grid container className={classes.root} spacing={16}>
+      <ImageCaptureModal
+        showModal={this.state.showModal}
+        imageOrientation={this.state.modalProps.imageOrientation}
+        onClose={() => this.setState({ showModal: false })}
+        saveImage={this.handleSubmit}
+      />
+    );
+  }
+
+  render() {
+    return (
+      <Grid container className={this.props.classes.root} spacing={16}>
         <Grid container justify='center' spacing={40}>
           {this.renderCustomerImages()}
-          <ImageCaptureModal
-            showModal={this.state.showModal}
-            onClose={() => this.setState({ showModal: false })}
-            saveImage={this.handleSubmit}
-          />
+          {this.renderModal()}
         </Grid>
       </Grid>
     );
